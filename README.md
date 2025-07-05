@@ -20,15 +20,35 @@ $ dotnet build
 
 ## Running the Project
 
-Copy an initial board file to the project directory.
+Choose an initial board file to pass into the appliction.
 
 ```shell
-$ cp boards/generators/gosper-glider.lfe LithiumIron.App/board.lfe
 $ cd LithiumIron.App
-$ dotnet run
+$ dotnet run -- ../boards/generators/gosper-glider.lfe
 ```
 
-The `board.lfe` filename is hardcoded. Use `^C` to stop the program.
+Use `^C` to stop the program.
+
+## Usage
+
+The application has the follow command line options. The board filename argument is required.
+
+```
+USAGE: life [--help] [--keep] [--adjust-board <x> <y>] [--columns <int>] [--rows <int>] <filename>
+
+BOARD:
+
+    <filename>            Filename of the desired initial board state
+
+OPTIONS:
+
+    --keep, -k            Never destroy active cells outside of the displayed board
+    --adjust-board, -a <x> <y>
+                          Adjust every coordinate of the input board
+    --columns, -c <int>   Specify number of board columns
+    --rows, -r <int>      Specify number of board rows
+    --help                display this list of options.
+```
 
 ## Board Files
 

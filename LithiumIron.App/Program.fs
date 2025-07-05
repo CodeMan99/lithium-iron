@@ -3,7 +3,27 @@
 open System
 open System.IO
 open System.Threading
+open Argu
 open FSharp.Collections
+
+[<RequireQualifiedAccess>]
+type CliArguments =
+    | [<MainCommand; ExactlyOnce; Last>] Board of filename: string
+    // | [<AltCommandLine("-b")>] Borders
+    | [<AltCommandLine("-k")>] Keep
+    | [<AltCommandLine("-a")>] Adjust_Board of x: int * y: int
+    | [<AltCommandLine("-c")>] Columns of int
+    | [<AltCommandLine("-r")>] Rows of int
+
+    interface IArgParserTemplate with
+        member this.Usage =
+            match this with
+            | Board _ -> "Filename of the desired initial board state"
+            // | Borders -> "Draw borders around the board"
+            | Keep -> "Never destroy active cells outside of the displayed board"
+            | Adjust_Board _ -> "Adjust every coordinate of the input board"
+            | Rows _ -> "Specify number of board rows"
+            | Columns _ -> "Specify number of board columns"
 
 type Cell = Cell of int * int
 
@@ -35,20 +55,59 @@ let advance (board: Cell Set) : Cell Set =
 
         alive)
 
+let readBoardFile (adjustments: int * int) filename =
+    let (ax, ay) = adjustments
+    filename
+    |> File.ReadAllLines
+    |> Array.indexed
+    |> Seq.collect (fun (y, line) -> line |> Seq.mapi (fun x c -> x, y, c = '#'))
+    |> Seq.choose (fun (x, y, alive) -> if alive then (x + ax, y + ay) |> Cell |> Some else None)
+    |> Set.ofSeq
+
+let minColumns (board: Cell Set) (additional: int) =
+    board
+    |> Seq.map (fun (Cell (x, _)) -> x)
+    |> Seq.max
+    |> (+) additional
+
+let minRows (board: Cell Set) (additional: int) =
+    board
+    |> Seq.map (fun (Cell (_, y)) -> y)
+    |> Seq.max
+    |> (+) additional
+
 let killBeyond (Cell(mx, my)) (board: Cell Set) =
     board |> Set.filter (fun (Cell(x, y)) -> x <= mx && y <= my)
 
+let errorColors =
+    function
+    | ErrorCode.HelpText -> None
+    | _ -> Some ConsoleColor.Red
+
 [<EntryPoint>]
-let main _args =
-    let boundary = (66, 23) |> Cell |> killBeyond
-    let advanceWithBoundary = advance >> boundary
-    let mutable board =
-        "board.lfe"
-        |> File.ReadAllLines
-        |> Array.indexed
-        |> Seq.collect (fun (y, line) -> line |> Seq.mapi (fun x c -> x, y, c = '#'))
-        |> Seq.choose (fun (x, y, alive) -> if alive then (x, y) |> Cell |> Some else None)
-        |> Set.ofSeq
+let main argv =
+    let parser = ArgumentParser.Create<CliArguments>(
+        programName = "life",
+        errorHandler = ProcessExiter(colorizer = errorColors)
+    )
+    let options = parser.ParseCommandLine argv
+    let adjustments = options.TryGetResult(CliArguments.Adjust_Board) |> Option.defaultValue (2, 2)
+    let mutable board = options.GetResult(CliArguments.Board) |> readBoardFile adjustments
+    let columnCount =
+        options.TryGetResult CliArguments.Columns
+        |> Option.defaultWith (fun () -> adjustments |> fst |> minColumns board)
+    let rowCount =
+        options.TryGetResult CliArguments.Rows
+        |> Option.defaultWith (fun () -> adjustments |> snd |> minRows board)
+
+    let advanceWithBoundary =
+        if options.Contains CliArguments.Keep then
+            // Keep and calculate all cells even if beyond the rendered board
+            advance
+        else
+            // Kill cells past the given bottom-right boundary
+            let boundary = (columnCount + 2, rowCount + 2) |> Cell |> killBeyond
+            advance >> boundary
 
     Console.CancelKeyPress.Add(fun _args -> Console.CursorVisible <- true)
     Console.CursorVisible <- false
@@ -56,8 +115,8 @@ let main _args =
     while not <| Set.isEmpty board do
         Console.Write "\x1bc"
 
-        for y in 0..20 do
-            for x in 0..63 do
+        for y in 0 .. rowCount do
+            for x in 0 .. columnCount do
                 if (x, y) |> Cell |> active board then '\u25cf' else ' '
                 |> Console.Write
 
