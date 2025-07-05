@@ -55,3 +55,37 @@ OPTIONS:
 Initial board state is stored in a simple text file. Use the `#` (pound)
 symbol to indicate active cells. Use any other charactor to indicate empty
 cells. Save the file as `<name>.lfe`.
+
+### Example Boards
+
+Please refer to any of the board files found in the `boards` directory.
+
+```
+boards
+├── generators
+│   ├── gosper-glider.lfe
+│   └── simkin-glider.lfe
+├── methuselahs
+│   ├── acorn.lfe
+│   ├── diehard.lfe
+│   ├── random.lfe
+│   ├── r-pentomino.lfe
+│   └── taylor-box-target.lfe
+├── oscillators
+│   ├── beacon.lfe
+│   ├── blinker.lfe
+│   ├── pentadecathlon.lfe
+│   ├── pulsar.lfe
+│   └── toad.lfe
+├── spaceships
+│   ├── glider.lfe
+│   ├── heavy-weight.lfe
+│   ├── light-weight.lfe
+│   └── middle-weight.lfe
+└── stills
+    ├── beehive.lfe
+    ├── block.lfe
+    ├── boat.lfe
+    ├── loaf.lfe
+    └── tub.lfe
+```
