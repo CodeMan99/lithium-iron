@@ -115,8 +115,8 @@ let main argv =
     while not <| Set.isEmpty board do
         Console.Write "\x1bc"
 
-        for y in 0 .. rowCount do
-            for x in 0 .. columnCount do
+        for y in 0 .. (rowCount - 1) do
+            for x in 0 .. (columnCount - 1) do
                 if (x, y) |> Cell |> active board then '\u25cf' else ' '
                 |> Console.Write
 
