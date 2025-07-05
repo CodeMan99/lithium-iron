@@ -101,7 +101,7 @@ let renderFrame lastRow lastColumn board =
             if (x, y) |> Cell |> active board then '\u25cf' else ' '
             |> Console.Write
 
-        Console.WriteLine()
+        if y <> lastRow then Console.WriteLine()
 
 [<EntryPoint>]
 let main argv =
