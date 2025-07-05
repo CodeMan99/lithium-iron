@@ -6,6 +6,13 @@ open System.Threading
 open Argu
 open FSharp.Collections
 
+type GameSpeed =
+    | Sloth
+    | Turtle
+    | Human
+    | Horse
+    | Cheetah
+
 [<RequireQualifiedAccess>]
 type CliArguments =
     | [<MainCommand; ExactlyOnce; Last>] Board of filename: string
@@ -14,6 +21,7 @@ type CliArguments =
     | [<AltCommandLine("-a")>] Adjust_Board of x: int * y: int
     | [<AltCommandLine("-c")>] Columns of int
     | [<AltCommandLine("-r")>] Rows of int
+    | [<AltCommandLine("-s")>] Speed of GameSpeed
 
     interface IArgParserTemplate with
         member this.Usage =
@@ -24,6 +32,7 @@ type CliArguments =
             | Adjust_Board _ -> "Adjust every coordinate of the input board"
             | Rows _ -> "Specify number of board rows"
             | Columns _ -> "Specify number of board columns"
+            | Speed _ -> "How fast the game will render each frame [default: human]"
 
 type Cell = Cell of int * int
 
@@ -99,6 +108,16 @@ let main argv =
     let rowCount =
         options.TryGetResult CliArguments.Rows
         |> Option.defaultWith (fun () -> adjustments |> snd |> minRows board)
+    let frameDelay =
+        let framerate =
+            match options.TryGetResult CliArguments.Speed with
+            | Some Sloth -> 2
+            | Some Turtle -> 4
+            | Some Human -> 8
+            | Some Horse -> 12
+            | Some Cheetah -> 16
+            | None -> 8
+        1000 / framerate
 
     let advanceWithBoundary =
         if options.Contains CliArguments.Keep then
@@ -123,7 +142,7 @@ let main argv =
             Console.WriteLine()
 
         board <- advanceWithBoundary board
-        Thread.Sleep 83
+        Thread.Sleep frameDelay
 
     Console.CursorVisible <- true
 
