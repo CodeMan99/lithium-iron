@@ -93,6 +93,16 @@ let errorColors =
     | ErrorCode.HelpText -> None
     | _ -> Some ConsoleColor.Red
 
+let renderFrame lastRow lastColumn board =
+    Console.Write "\x1bc"
+
+    for y in 0 .. lastRow do
+        for x in 0 .. lastColumn do
+            if (x, y) |> Cell |> active board then '\u25cf' else ' '
+            |> Console.Write
+
+        Console.WriteLine()
+
 [<EntryPoint>]
 let main argv =
     let parser = ArgumentParser.Create<CliArguments>(
@@ -118,7 +128,6 @@ let main argv =
             | Some Cheetah -> 16
             | None -> 8
         1000 / framerate
-
     let advanceWithBoundary =
         if options.Contains CliArguments.Keep then
             // Keep and calculate all cells even if beyond the rendered board
@@ -127,20 +136,14 @@ let main argv =
             // Kill cells past the given bottom-right boundary
             let boundary = (columnCount + 2, rowCount + 2) |> Cell |> killBeyond
             advance >> boundary
+    let lastRow = rowCount - 1
+    let lastColumn = columnCount - 1
 
     Console.CancelKeyPress.Add(fun _args -> Console.CursorVisible <- true)
     Console.CursorVisible <- false
 
     while not <| Set.isEmpty board do
-        Console.Write "\x1bc"
-
-        for y in 0 .. (rowCount - 1) do
-            for x in 0 .. (columnCount - 1) do
-                if (x, y) |> Cell |> active board then '\u25cf' else ' '
-                |> Console.Write
-
-            Console.WriteLine()
-
+        renderFrame lastRow lastColumn board
         board <- advanceWithBoundary board
         Thread.Sleep frameDelay
 
