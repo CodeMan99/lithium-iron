@@ -64,6 +64,7 @@ let advance (board: Cell Set) : Cell Set =
 
 let readBoardFile (adjustments: int * int) filename =
     let (ax, ay) = adjustments
+
     filename
     |> File.ReadAllLines
     |> Array.indexed
@@ -72,16 +73,10 @@ let readBoardFile (adjustments: int * int) filename =
     |> Set.ofSeq
 
 let minColumns (board: Cell Set) (additional: int) =
-    board
-    |> Seq.map (fun (Cell (x, _)) -> x)
-    |> Seq.max
-    |> (+) additional
+    board |> Seq.map (fun (Cell(x, _)) -> x) |> Seq.max |> (+) additional
 
 let minRows (board: Cell Set) (additional: int) =
-    board
-    |> Seq.map (fun (Cell (_, y)) -> y)
-    |> Seq.max
-    |> (+) additional
+    board |> Seq.map (fun (Cell(_, y)) -> y) |> Seq.max |> (+) additional
 
 let killBeyond (Cell(mx, my)) (board: Cell Set) =
     board |> Set.filter (fun (Cell(x, y)) -> x <= mx && y <= my)
@@ -94,28 +89,35 @@ let errorColors =
 let renderFrame lastRow lastColumn board =
     Console.Write "\x1bc"
 
-    for y in 0 .. lastRow do
-        for x in 0 .. lastColumn do
+    for y in 0..lastRow do
+        for x in 0..lastColumn do
             if (x, y) |> Cell |> active board then '\u25cf' else ' '
             |> Console.Write
 
-        if y <> lastRow then Console.WriteLine()
+        if y <> lastRow then
+            Console.WriteLine()
 
 [<EntryPoint>]
 let main argv =
-    let parser = ArgumentParser.Create<CliArguments>(
-        programName = "life",
-        errorHandler = ProcessExiter(colorizer = errorColors)
-    )
+    let parser =
+        ArgumentParser.Create<CliArguments>(programName = "life", errorHandler = ProcessExiter(colorizer = errorColors))
+
     let options = parser.ParseCommandLine argv
-    let adjustments = options.TryGetResult(CliArguments.Adjust_Board) |> Option.defaultValue (2, 2)
-    let mutable board = options.GetResult(CliArguments.Board) |> readBoardFile adjustments
+
+    let adjustments =
+        options.TryGetResult(CliArguments.Adjust_Board) |> Option.defaultValue (2, 2)
+
+    let mutable board =
+        options.GetResult(CliArguments.Board) |> readBoardFile adjustments
+
     let columnCount =
         options.TryGetResult CliArguments.Columns
         |> Option.defaultWith (fun () -> adjustments |> fst |> minColumns board)
+
     let rowCount =
         options.TryGetResult CliArguments.Rows
         |> Option.defaultWith (fun () -> adjustments |> snd |> minRows board)
+
     let frameDelay =
         let framerate =
             match options.TryGetResult CliArguments.Speed with
@@ -125,7 +127,9 @@ let main argv =
             | Some Horse -> 12
             | Some Cheetah -> 16
             | None -> 8
+
         1000 / framerate
+
     let advanceWithBoundary =
         if options.Contains CliArguments.Keep then
             // Keep and calculate all cells even if beyond the rendered board
@@ -134,6 +138,7 @@ let main argv =
             // Kill cells past the given bottom-right boundary
             let boundary = (columnCount + 2, rowCount + 2) |> Cell |> killBeyond
             advance >> boundary
+
     let lastRow = rowCount - 1
     let lastColumn = columnCount - 1
 
