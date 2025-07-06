@@ -16,7 +16,6 @@ type GameSpeed =
 [<RequireQualifiedAccess>]
 type CliArguments =
     | [<MainCommand; ExactlyOnce; Last>] Board of filename: string
-    // | [<AltCommandLine("-b")>] Borders
     | [<AltCommandLine("-k")>] Keep
     | [<AltCommandLine("-a")>] Adjust_Board of x: int * y: int
     | [<AltCommandLine("-c")>] Columns of int
@@ -27,7 +26,6 @@ type CliArguments =
         member this.Usage =
             match this with
             | Board _ -> "Filename of the desired initial board state"
-            // | Borders -> "Draw borders around the board"
             | Keep -> "Never destroy active cells outside of the displayed board"
             | Adjust_Board _ -> "Adjust every coordinate of the input board"
             | Rows _ -> "Specify number of board rows"
