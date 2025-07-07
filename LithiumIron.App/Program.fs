@@ -13,6 +13,14 @@ type GameSpeed =
     | Zebra
     | Cheetah
 
+    member this.FrameRate =
+        match this with
+        | Sloth -> 2
+        | Turtle -> 4
+        | Human -> 8
+        | Zebra -> 12
+        | Cheetah -> 16
+
 [<RequireQualifiedAccess>]
 type CliArguments =
     | [<MainCommand; ExactlyOnce; Last>] Board of filename: string
@@ -118,17 +126,8 @@ let main argv =
         options.TryGetResult CliArguments.Rows
         |> Option.defaultWith (fun () -> adjustments |> snd |> minRows board)
 
-    let frameDelay =
-        let framerate =
-            match options.TryGetResult CliArguments.Speed with
-            | Some Sloth -> 2
-            | Some Turtle -> 4
-            | None // default value
-            | Some Human -> 8
-            | Some Zebra -> 12
-            | Some Cheetah -> 16
-
-        1000 / framerate
+    let speed = options.TryGetResult CliArguments.Speed |> Option.defaultValue Human
+    let millisecondsTimeout = 1000 / speed.FrameRate
 
     let advanceWithBoundary =
         if options.Contains CliArguments.Keep then
@@ -148,7 +147,7 @@ let main argv =
     while not <| Set.isEmpty board do
         renderFrame lastRow lastColumn board
         board <- advanceWithBoundary board
-        Thread.Sleep frameDelay
+        Thread.Sleep millisecondsTimeout
 
     Console.CursorVisible <- true
 
