@@ -144,10 +144,11 @@ let main argv =
     Console.CancelKeyPress.Add(fun _args -> Console.CursorVisible <- true)
     Console.CursorVisible <- false
 
+    renderFrame lastRow lastColumn board
     while not <| Set.isEmpty board do
-        renderFrame lastRow lastColumn board
         board <- advanceWithBoundary board
         Thread.Sleep millisecondsTimeout
+        renderFrame lastRow lastColumn board
 
     Console.CursorVisible <- true
 
