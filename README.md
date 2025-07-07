@@ -34,7 +34,7 @@ Use `^C` to stop the program.
 The application has the follow command line options. The board filename argument is required.
 
 ```
-USAGE: life [--help] [--keep] [--adjust-board <x> <y>] [--columns <int>] [--rows <int>] <filename>
+USAGE: life [--help] [--keep] [--adjust-board <x> <y>] [--columns <int>] [--rows <int>] [--speed <sloth|turtle|human|zebra|cheetah>] <filename>
 
 BOARD:
 
@@ -47,8 +47,31 @@ OPTIONS:
                           Adjust every coordinate of the input board
     --columns, -c <int>   Specify number of board columns
     --rows, -r <int>      Specify number of board rows
+    --speed, -s <sloth|turtle|human|zebra|cheetah>
+                          How fast the game will render each frame [default: human]
     --help                display this list of options.
+
+
 ```
+
+### Complete Example
+
+Given a large enough terminal area, this should display every cell of "Diehard" correctly.
+
+```shell
+$ dotnet run --project LithiumIron.App/LithiumIron.App.fsproj -- --rows $LINES --columns $COLUMNS --adjust-board 20 10 --speed zebra --keep boards/methuselahs/diehard.lfe
+```
+
+Breakdown:
+
+| Option | Description |
+| ------ | ----------- |
+| `--rows $LINES` | Set number of rows (Y axis values) equal to the number of available lines. |
+| `--columns $COLUMNS` | Set number of columns (X axis values) equal to the number of available columns. |
+| `--adjust-board 20 10` | Adjust the initial board by 20 units right and 10 units down from the top. |
+| `--speed zebra` | Run at a slightly faster framerate than default. |
+| `--keep` | Keep all cells of every generation. |
+| `boards/methuselahs/diehards.lfe` | The filename being loaded as initial state. |
 
 ## Board Files
 
