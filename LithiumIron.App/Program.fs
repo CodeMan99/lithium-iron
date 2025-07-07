@@ -10,7 +10,7 @@ type GameSpeed =
     | Sloth
     | Turtle
     | Human
-    | Horse
+    | Zebra
     | Cheetah
 
 [<RequireQualifiedAccess>]
@@ -123,10 +123,10 @@ let main argv =
             match options.TryGetResult CliArguments.Speed with
             | Some Sloth -> 2
             | Some Turtle -> 4
+            | None // default value
             | Some Human -> 8
-            | Some Horse -> 12
+            | Some Zebra -> 12
             | Some Cheetah -> 16
-            | None -> 8
 
         1000 / framerate
 
