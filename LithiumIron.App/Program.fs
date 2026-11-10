@@ -1,4 +1,4 @@
-﻿module LithumIron.App
+module LithumIron.App
 
 open System
 open System.IO
@@ -50,6 +50,28 @@ type CliArguments =
             | Speed _ -> "How fast the game will render each frame [default: human]"
 
 type Cell = Cell of int * int
+
+type ConsoleApplicationContext() =
+    do Console.CursorVisible <- false
+    do Console.Write EnterAlternateScreen
+
+    interface IDisposable with
+        member _.Dispose() : unit =
+            do Console.Write ClearScreen
+            do Console.Write ExitAlternateScreen
+            do Console.CursorVisible <- true
+
+let tryReadKey () : ConsoleKeyInfo option =
+    if Console.KeyAvailable then
+        Console.ReadKey true |> Some
+    else
+        None
+
+let (|Exit|_|) (keyInfo: ConsoleKeyInfo) =
+    if keyInfo.Modifiers = ConsoleModifiers.Control && keyInfo.Key = ConsoleKey.Q then
+        Some()
+    else
+        None
 
 let neighbors (Cell(x, y)) : Cell seq =
     seq {
@@ -150,18 +172,20 @@ let main argv =
     let lastRow = rowCount - 1
     let lastColumn = columnCount - 1
 
-    Console.CancelKeyPress.Add(fun _args ->
-        Console.Write ClearScreen
-        Console.Write ExitAlternateScreen
-        Console.CursorVisible <- true)
+    use app = new ConsoleApplicationContext()
 
-    Console.CursorVisible <- false
-    Console.Write EnterAlternateScreen
+    Console.CancelKeyPress.Add(fun _ ->
+        do (app :> IDisposable).Dispose()
+        do board <- Set.empty)
 
     renderFrame lastRow lastColumn board
 
     while not <| Set.isEmpty board do
-        board <- advanceWithBoundary board
+        board <-
+            match tryReadKey () with
+            | Some Exit -> Set.empty
+            | _ -> advanceWithBoundary board
+
         Thread.Sleep millisecondsTimeout
         renderFrame lastRow lastColumn board
 
