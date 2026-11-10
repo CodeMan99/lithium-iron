@@ -6,6 +6,15 @@ open System.Threading
 open Argu
 open FSharp.Collections
 
+[<Literal>]
+let ClearScreen = "\x1bc"
+
+[<Literal>]
+let EnterAlternateScreen = "\x1b[?1049h"
+
+[<Literal>]
+let ExitAlternateScreen = "\x1b[?1049l"
+
 type GameSpeed =
     | Sloth
     | Turtle
@@ -95,7 +104,7 @@ let errorColors =
     | _ -> Some ConsoleColor.Red
 
 let renderFrame lastRow lastColumn board =
-    Console.Write "\x1bc"
+    Console.Write ClearScreen
 
     for y in 0..lastRow do
         for x in 0..lastColumn do
@@ -141,10 +150,16 @@ let main argv =
     let lastRow = rowCount - 1
     let lastColumn = columnCount - 1
 
-    Console.CancelKeyPress.Add(fun _args -> Console.CursorVisible <- true)
+    Console.CancelKeyPress.Add(fun _args ->
+        Console.Write ClearScreen
+        Console.Write ExitAlternateScreen
+        Console.CursorVisible <- true)
+
     Console.CursorVisible <- false
+    Console.Write EnterAlternateScreen
 
     renderFrame lastRow lastColumn board
+
     while not <| Set.isEmpty board do
         board <- advanceWithBoundary board
         Thread.Sleep millisecondsTimeout
