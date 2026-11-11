@@ -15,6 +15,15 @@ let EnterAlternateScreen = "\x1b[?1049h"
 [<Literal>]
 let ExitAlternateScreen = "\x1b[?1049l"
 
+[<Literal>]
+let BlockUpper = '\u2580'
+
+[<Literal>]
+let BlockLower = '\u2584'
+
+[<Literal>]
+let BlockFull = '\u2588'
+
 type GameSpeed =
     | Sloth
     | Turtle
@@ -27,8 +36,8 @@ type GameSpeed =
         | Sloth -> 2
         | Turtle -> 4
         | Human -> 8
-        | Zebra -> 12
-        | Cheetah -> 16
+        | Zebra -> 16
+        | Cheetah -> 32
 
 [<RequireQualifiedAccess>]
 type CliArguments =
@@ -51,15 +60,23 @@ type CliArguments =
 
 type Cell = Cell of int * int
 
-type ConsoleApplicationContext() =
+type ConsoleApplicationContext(stream: Stream) =
+    let writer =
+        let w = new StreamWriter(stream)
+        w.AutoFlush <- false
+        w
+
     do Console.CursorVisible <- false
     do Console.Write EnterAlternateScreen
 
     interface IDisposable with
         member _.Dispose() : unit =
+            do writer.Dispose()
             do Console.Write ClearScreen
             do Console.Write ExitAlternateScreen
             do Console.CursorVisible <- true
+
+    member _.Writer = writer
 
 let tryReadKey () : ConsoleKeyInfo option =
     if Console.KeyAvailable then
@@ -125,16 +142,35 @@ let errorColors =
     | ErrorCode.HelpText -> None
     | _ -> Some ConsoleColor.Red
 
-let renderFrame lastRow lastColumn board =
-    Console.Write ClearScreen
+let renderFrame lastRow lastColumn board (out: StreamWriter) =
+    out.Write ClearScreen
 
-    for y in 0..lastRow do
+    let lineBuffer () = Array.create (lastColumn + 1) ' '
+
+    for y in 0..2..lastRow do
+        let yUpper, yLower = y, if y > lastRow then None else y + 1 |> Some
+        let line = lineBuffer ()
+
+        if y > 0 then
+            do out.WriteLine()
+
         for x in 0..lastColumn do
-            if (x, y) |> Cell |> active board then '\u25cf' else ' '
-            |> Console.Write
+            let cellUpper = (x, yUpper) |> Cell |> active board
 
-        if y <> lastRow then
-            Console.WriteLine()
+            let cellLower =
+                yLower
+                |> Option.map (fun y -> (x, y) |> Cell |> active board)
+                |> Option.defaultValue false
+
+            match cellUpper, cellLower with
+            | true, true -> line[x] <- BlockFull
+            | true, false -> line[x] <- BlockUpper
+            | false, true -> line[x] <- BlockLower
+            | false, false -> ()
+
+        out.Write line
+
+    out.Flush()
 
 [<EntryPoint>]
 let main argv =
@@ -172,23 +208,20 @@ let main argv =
     let lastRow = rowCount - 1
     let lastColumn = columnCount - 1
 
-    use app = new ConsoleApplicationContext()
+    use app = new ConsoleApplicationContext(Console.OpenStandardOutput())
 
     Console.CancelKeyPress.Add(fun _ ->
         do (app :> IDisposable).Dispose()
         do board <- Set.empty)
 
-    renderFrame lastRow lastColumn board
-
     while not <| Set.isEmpty board do
+        renderFrame lastRow lastColumn board app.Writer
+
         board <-
             match tryReadKey () with
             | Some Exit -> Set.empty
             | _ -> advanceWithBoundary board
 
         Thread.Sleep millisecondsTimeout
-        renderFrame lastRow lastColumn board
-
-    Console.CursorVisible <- true
 
     0
