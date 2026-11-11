@@ -153,12 +153,6 @@ let readBoardFile (windowSize: int * int) filename =
 
         cells |> List.map (fun (x, y) -> Cell(x + offsetX, y + offsetY)) |> Set.ofList
 
-let minColumns (board: Cell Set) (additional: int) =
-    board |> Seq.map (fun (Cell(x, _)) -> x) |> Seq.max |> (+) additional
-
-let minRows (board: Cell Set) (additional: int) =
-    board |> Seq.map (fun (Cell(_, y)) -> y) |> Seq.max |> (+) additional
-
 let killBeyond (Cell(mx, my)) (board: Cell Set) =
     board |> Set.filter (fun (Cell(x, y)) -> x <= mx && y <= my)
 
