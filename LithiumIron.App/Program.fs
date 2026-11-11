@@ -87,14 +87,16 @@ let (|Exit|_|) (keyInfo: ConsoleKeyInfo) =
         None
 
 let neighbors (Cell(x, y)) : Cell array =
-    [| Cell(x + 1, y)
-       Cell(x - 1, y)
-       Cell(x, y + 1)
-       Cell(x, y - 1)
-       Cell(x + 1, y + 1)
-       Cell(x + 1, y - 1)
-       Cell(x - 1, y + 1)
-       Cell(x - 1, y - 1) |]
+    [|
+        Cell(x + 1, y)
+        Cell(x - 1, y)
+        Cell(x, y + 1)
+        Cell(x, y - 1)
+        Cell(x + 1, y + 1)
+        Cell(x + 1, y - 1)
+        Cell(x - 1, y + 1)
+        Cell(x - 1, y - 1)
+    |]
 
 let active (board: Cell Set) position = Set.contains position board
 
