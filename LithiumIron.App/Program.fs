@@ -107,17 +107,21 @@ let neighbors (Cell(x, y)) : Cell array =
 let active (board: Cell Set) position = Set.contains position board
 
 let advance (board: Cell Set) : Cell Set =
-    let valueOf (position: Cell) : int = if active board position then 1 else 0
+    let counts = Collections.Generic.Dictionary<Cell,int>(board.Count * 8)
+    let mutable nextBoard = Set.empty
 
-    board
-    |> Seq.collect neighbors
-    |> Seq.append board
-    |> Set.ofSeq
-    |> Set.filter (fun (cell) ->
-        let count = cell |> neighbors |> Array.sumBy valueOf
-        let alive = count = 3 || count = 2 && active board cell
+    for cell in board do
+        for n in neighbors cell do
+            counts[n] <-
+                match counts.TryGetValue n with
+                | true, count -> count + 1
+                | false, _ -> 1
 
-        alive)
+    for KeyValue(cell, count) in counts do
+        if count = 3 || count = 2 && board.Contains cell then
+            nextBoard <- Set.add cell nextBoard
+
+    nextBoard
 
 let readBoardFile (adjustments: int * int) filename =
     let (ax, ay) = adjustments
