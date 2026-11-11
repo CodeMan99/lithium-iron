@@ -33,11 +33,11 @@ type GameSpeed =
 
     member this.FrameRate =
         match this with
-        | Sloth -> 2
-        | Turtle -> 4
-        | Human -> 8
-        | Zebra -> 16
-        | Cheetah -> 32
+        | Sloth -> 2L
+        | Turtle -> 4L
+        | Human -> 8L
+        | Zebra -> 16L
+        | Cheetah -> 32L
 
 [<RequireQualifiedAccess>]
 type CliArguments =
@@ -62,7 +62,9 @@ type Cell = Cell of int * int
 
 type ConsoleApplicationContext(stream: Stream) =
     let writer =
-        let w = new StreamWriter(stream)
+        let encoding = Text.Encoding.UTF8
+        let bufferSize = 32768
+        let w = new StreamWriter(stream, encoding, bufferSize)
         w.AutoFlush <- false
         w
 
@@ -193,7 +195,7 @@ let main argv =
         |> Option.defaultWith (fun () -> adjustments |> snd |> minRows board)
 
     let speed = options.TryGetResult CliArguments.Speed |> Option.defaultValue Human
-    let millisecondsTimeout = 1000 / speed.FrameRate
+    let frameBudgetMs = 1000L / speed.FrameRate
 
     let advanceWithBoundary =
         if options.Contains CliArguments.Keep then
@@ -206,6 +208,7 @@ let main argv =
 
     let lastRow = rowCount - 1
     let lastColumn = columnCount - 1
+    let stopwatch = Diagnostics.Stopwatch ()
 
     use app = new ConsoleApplicationContext(Console.OpenStandardOutput())
 
@@ -214,6 +217,7 @@ let main argv =
         do board <- Set.empty)
 
     while not <| Set.isEmpty board do
+        stopwatch.Restart()
         renderFrame lastRow lastColumn board app.Writer
 
         board <-
@@ -221,6 +225,9 @@ let main argv =
             | Some Exit -> Set.empty
             | _ -> advanceWithBoundary board
 
-        Thread.Sleep millisecondsTimeout
+        let millisecondsTimeout = int (frameBudgetMs - stopwatch.ElapsedMilliseconds)
+
+        if millisecondsTimeout > 0 then
+            Thread.Sleep millisecondsTimeout
 
     0
