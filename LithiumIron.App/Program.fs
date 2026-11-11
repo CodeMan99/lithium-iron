@@ -43,9 +43,6 @@ type GameSpeed =
 type CliArguments =
     | [<MainCommand; ExactlyOnce; Last>] Board of filename: string
     | [<AltCommandLine("-k")>] Keep
-    | [<AltCommandLine("-a")>] Adjust_Board of x: int * y: int
-    | [<AltCommandLine("-c")>] Columns of int
-    | [<AltCommandLine("-r")>] Rows of int
     | [<AltCommandLine("-s")>] Speed of GameSpeed
 
     interface IArgParserTemplate with
@@ -53,9 +50,6 @@ type CliArguments =
             match this with
             | Board _ -> "Filename of the desired initial board state"
             | Keep -> "Never destroy active cells outside of the displayed board"
-            | Adjust_Board _ -> "Adjust every coordinate of the input board"
-            | Rows _ -> "Specify number of board rows"
-            | Columns _ -> "Specify number of board columns"
             | Speed _ -> "How fast the game will render each frame [default: human]"
 
 type Cell = Cell of int * int
@@ -93,21 +87,19 @@ let (|Exit|_|) (keyInfo: ConsoleKeyInfo) =
         None
 
 let neighbors (Cell(x, y)) : Cell array =
-    [|
-        Cell (x + 1, y)
-        Cell (x - 1, y)
-        Cell (x, y + 1)
-        Cell (x, y - 1)
-        Cell (x + 1, y + 1)
-        Cell (x + 1, y - 1)
-        Cell (x - 1, y + 1)
-        Cell (x - 1, y - 1)
-    |]
+    [| Cell(x + 1, y)
+       Cell(x - 1, y)
+       Cell(x, y + 1)
+       Cell(x, y - 1)
+       Cell(x + 1, y + 1)
+       Cell(x + 1, y - 1)
+       Cell(x - 1, y + 1)
+       Cell(x - 1, y - 1) |]
 
 let active (board: Cell Set) position = Set.contains position board
 
 let advance (board: Cell Set) : Cell Set =
-    let counts = Collections.Generic.Dictionary<Cell,int>(board.Count * 8)
+    let counts = Collections.Generic.Dictionary<Cell, int>(board.Count * 8)
     let mutable nextBoard = Set.empty
 
     for cell in board do
@@ -123,15 +115,41 @@ let advance (board: Cell Set) : Cell Set =
 
     nextBoard
 
-let readBoardFile (adjustments: int * int) filename =
-    let (ax, ay) = adjustments
+let readBoardFile (windowSize: int * int) filename =
+    let columns, rows = windowSize
+    let mutable minX, maxX = Int32.MaxValue, 0
+    let mutable minY, maxY = Int32.MaxValue, 0
+    let mutable cells = []
+    let lines = File.ReadAllLines filename
 
-    filename
-    |> File.ReadAllLines
-    |> Array.indexed
-    |> Seq.collect (fun (y, line) -> line |> Seq.mapi (fun x c -> x, y, c = '#'))
-    |> Seq.choose (fun (x, y, alive) -> if alive then (x + ax, y + ay) |> Cell |> Some else None)
-    |> Set.ofSeq
+    for y = 0 to lines.Length - 1 do
+        let line = lines[y]
+
+        for x = 0 to line.Length - 1 do
+            if line[x] = '#' then
+                cells <- (x, y) :: cells
+
+                if x < minX then
+                    minX <- x
+
+                if x > maxX then
+                    maxX <- x
+
+                if y < minY then
+                    minY <- y
+
+                if y > maxY then
+                    maxY <- y
+
+    if List.isEmpty cells then
+        Set.empty
+    else
+        let width = maxX - minX + 1
+        let height = maxY - minY + 1
+        let offsetX = (columns - width) / 2 - minX
+        let offsetY = (rows - height) / 2 - minY
+
+        cells |> List.map (fun (x, y) -> Cell(x + offsetX, y + offsetY)) |> Set.ofList
 
 let minColumns (board: Cell Set) (additional: int) =
     board |> Seq.map (fun (Cell(x, _)) -> x) |> Seq.max |> (+) additional
@@ -184,20 +202,13 @@ let main argv =
 
     let options = parser.ParseCommandLine argv
 
-    let adjustments =
-        options.TryGetResult(CliArguments.Adjust_Board) |> Option.defaultValue (2, 2)
+    let windowSize =
+        try
+            Console.WindowWidth, Console.WindowHeight * 2
+        with _ ->
+            80, 48
 
-    let mutable board =
-        options.GetResult(CliArguments.Board) |> readBoardFile adjustments
-
-    let columnCount =
-        options.TryGetResult CliArguments.Columns
-        |> Option.defaultWith (fun () -> adjustments |> fst |> minColumns board)
-
-    let rowCount =
-        options.TryGetResult CliArguments.Rows
-        |> Option.defaultWith (fun () -> adjustments |> snd |> minRows board)
-
+    let mutable board = options.GetResult CliArguments.Board |> readBoardFile windowSize
     let speed = options.TryGetResult CliArguments.Speed |> Option.defaultValue Human
     let frameBudgetMs = 1000L / speed.FrameRate
 
@@ -207,12 +218,14 @@ let main argv =
             advance
         else
             // Kill cells past the given bottom-right boundary
-            let boundary = (columnCount + 2, rowCount + 2) |> Cell |> killBeyond
+            let boundary = windowSize |> Cell |> killBeyond
             advance >> boundary
 
-    let lastRow = rowCount - 1
-    let lastColumn = columnCount - 1
-    let stopwatch = Diagnostics.Stopwatch ()
+    let lastColumn, lastRow =
+        let width, height = windowSize
+        width - 1, height - 1
+
+    let stopwatch = Diagnostics.Stopwatch()
 
     use app = new ConsoleApplicationContext(Console.OpenStandardOutput())
 
