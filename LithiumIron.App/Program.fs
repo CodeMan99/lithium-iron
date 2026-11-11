@@ -90,18 +90,17 @@ let (|Exit|_|) (keyInfo: ConsoleKeyInfo) =
     else
         None
 
-let neighbors (Cell(x, y)) : Cell seq =
-    seq {
-        x + 1, y
-        x - 1, y
-        x, y + 1
-        x, y - 1
-        x + 1, y + 1
-        x + 1, y - 1
-        x - 1, y + 1
-        x - 1, y - 1
-    }
-    |> Seq.map Cell
+let neighbors (Cell(x, y)) : Cell array =
+    [|
+        Cell (x + 1, y)
+        Cell (x - 1, y)
+        Cell (x, y + 1)
+        Cell (x, y - 1)
+        Cell (x + 1, y + 1)
+        Cell (x + 1, y - 1)
+        Cell (x - 1, y + 1)
+        Cell (x - 1, y - 1)
+    |]
 
 let active (board: Cell Set) position = Set.contains position board
 
@@ -113,7 +112,7 @@ let advance (board: Cell Set) : Cell Set =
     |> Seq.append board
     |> Set.ofSeq
     |> Set.filter (fun (cell) ->
-        let count = cell |> neighbors |> Seq.sumBy valueOf
+        let count = cell |> neighbors |> Array.sumBy valueOf
         let alive = count = 3 || count = 2 && active board cell
 
         alive)
